@@ -12,7 +12,7 @@ import {
 } from "react-native";
 import { io, Socket } from "socket.io-client";
 
-const API_URL = "http://localhost:5000";
+const API_URL = "https://real-time-chat-application-vedaz.onrender.com";
 
 interface Message {
   _id: string;
