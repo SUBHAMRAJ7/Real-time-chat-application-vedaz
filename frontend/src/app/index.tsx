@@ -36,6 +36,9 @@ export default function HomeScreen() {
   const [connected, setConnected] = useState(false);
   const [typingUser, setTypingUser] = useState("");
 
+  // NEW: track all online users
+  const [onlineUsers, setOnlineUsers] = useState<string[]>([]);
+
   const socketRef = useRef<Socket | null>(null);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -73,7 +76,9 @@ export default function HomeScreen() {
       return;
     }
 
-    const socket = io(API_URL);
+    const socket = io(API_URL, {
+      transports: ["websocket", "polling"],
+    });
 
     socketRef.current = socket;
 
@@ -83,9 +88,18 @@ export default function HomeScreen() {
 
       setConnected(true);
 
-      socket.emit("user_joined", {
-        username,
-      });
+      // Register username with backend
+socket.emit("join_chat", username);
+    });
+
+    // --------------------------------------------------
+    // ONLINE USERS
+    // --------------------------------------------------
+
+    socket.on("online_users", (users: string[]) => {
+      console.log("Online users:", users);
+
+      setOnlineUsers(users);
     });
 
     // Disconnected
@@ -93,6 +107,7 @@ export default function HomeScreen() {
       console.log("Disconnected from Socket.io");
 
       setConnected(false);
+      setOnlineUsers([]);
     });
 
     // New message
@@ -132,6 +147,7 @@ export default function HomeScreen() {
     return () => {
       socket.disconnect();
       socketRef.current = null;
+      setOnlineUsers([]);
     };
   }, [joined, username]);
 
@@ -196,18 +212,15 @@ export default function HomeScreen() {
       return;
     }
 
-    // Tell other users that we are typing
     socketRef.current.emit("typing", {
       username,
       isTyping: text.length > 0,
     });
 
-    // Clear previous timeout
     if (typingTimeoutRef.current) {
       clearTimeout(typingTimeoutRef.current);
     }
 
-    // Stop typing after 1.5 seconds
     if (text.length > 0) {
       typingTimeoutRef.current = setTimeout(() => {
         if (socketRef.current && connected) {
@@ -358,6 +371,62 @@ export default function HomeScreen() {
           </View>
         </View>
 
+        {/* ONLINE USERS */}
+
+        <View style={styles.onlineUsersContainer}>
+          <View style={styles.onlineUsersHeader}>
+            <Text style={styles.onlineUsersTitle}>
+              Users
+            </Text>
+
+            <Text style={styles.onlineCount}>
+              {onlineUsers.length} online
+            </Text>
+          </View>
+
+          {onlineUsers.length === 0 ? (
+            <Text style={styles.noUsersText}>
+              No other users online
+            </Text>
+          ) : (
+            <View style={styles.usersList}>
+              {onlineUsers
+                .filter((user) => user !== username)
+                .map((user) => (
+                  <View
+                    key={user}
+                    style={styles.userItem}
+                  >
+                    <View
+                      style={[
+                        styles.userStatusDot,
+                        styles.online,
+                      ]}
+                    />
+
+                    <Text style={styles.userName}>
+                      {user}
+                    </Text>
+
+                    <Text style={styles.userStatus}>
+                      Online
+                    </Text>
+                  </View>
+                ))}
+            </View>
+          )}
+
+          {/* Show offline information */}
+          {onlineUsers.filter(
+            (user) => user !== username
+          ).length === 0 && (
+            <Text style={styles.offlineInfo}>
+              Other users will appear here when they
+              join.
+            </Text>
+          )}
+        </View>
+
         {/* MESSAGES */}
 
         <FlatList
@@ -366,6 +435,7 @@ export default function HomeScreen() {
           keyExtractor={(item) => item._id}
           contentContainerStyle={styles.messagesList}
           showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
         />
 
         {/* TYPING INDICATOR */}
@@ -548,6 +618,82 @@ const styles = StyleSheet.create({
   },
 
   // --------------------------------------------------
+  // ONLINE USERS
+  // --------------------------------------------------
+
+  onlineUsersContainer: {
+    backgroundColor: "#ffffff",
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: "#dddddd",
+  },
+
+  onlineUsersHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+
+  onlineUsersTitle: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#075e54",
+  },
+
+  onlineCount: {
+    fontSize: 12,
+    color: "#777777",
+  },
+
+  usersList: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+  },
+
+  userItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#f5f5f5",
+    borderRadius: 15,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    marginRight: 7,
+    marginBottom: 5,
+  },
+
+  userStatusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 6,
+  },
+
+  userName: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#333333",
+  },
+
+  userStatus: {
+    fontSize: 11,
+    color: "#4caf50",
+    marginLeft: 5,
+  },
+
+  noUsersText: {
+    fontSize: 13,
+    color: "#777777",
+  },
+
+  offlineInfo: {
+    fontSize: 11,
+    color: "#999999",
+    marginTop: 4,
+  },
+
+  // --------------------------------------------------
   // MESSAGES
   // --------------------------------------------------
 
@@ -628,7 +774,6 @@ const styles = StyleSheet.create({
     alignItems: "flex-end",
     paddingHorizontal: 12,
     paddingVertical: 10,
-    
     backgroundColor: "#eeeeee",
     borderTopWidth: 1,
     borderTopColor: "#dddddd",
@@ -636,6 +781,7 @@ const styles = StyleSheet.create({
 
   input: {
     flex: 1,
+    minHeight: 50,
     backgroundColor: "#ffffff",
     borderRadius: 22,
     paddingHorizontal: 16,
