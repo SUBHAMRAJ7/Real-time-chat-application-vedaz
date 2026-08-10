@@ -325,8 +325,9 @@ export default function HomeScreen() {
         behavior={
           Platform.OS === "ios"
             ? "padding"
-            : undefined
+            : "height"
         }
+        keyboardVerticalOffset={0}
       >
         {/* HEADER */}
 
@@ -625,7 +626,9 @@ const styles = StyleSheet.create({
   inputContainer: {
     flexDirection: "row",
     alignItems: "flex-end",
-    padding: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    
     backgroundColor: "#eeeeee",
     borderTopWidth: 1,
     borderTopColor: "#dddddd",
@@ -647,7 +650,11 @@ const styles = StyleSheet.create({
 
   sendButton: {
     backgroundColor: "#075e54",
-    paddingHorizontal: 18,
+    justifyContent: "center",
+    alignItems: "center",
+    marginLeft: 10,
+    height: 50,
+    paddingHorizontal: 20,
     paddingVertical: 12,
     borderRadius: 22,
   },
@@ -659,5 +666,6 @@ const styles = StyleSheet.create({
   sendButtonText: {
     color: "#ffffff",
     fontWeight: "700",
+    fontSize: 16,
   },
 });
