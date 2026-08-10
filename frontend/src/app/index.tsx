@@ -380,7 +380,7 @@ socket.emit("join_chat", username);
             </Text>
 
             <Text style={styles.onlineCount}>
-              {onlineUsers.length} online
+             {onlineUsers.filter((user) => user !== username).length} online
             </Text>
           </View>
 
